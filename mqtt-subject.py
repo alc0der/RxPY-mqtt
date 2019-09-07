@@ -7,19 +7,27 @@ from rx.subject import Subject
 from os import environ
 import paho.mqtt.client as mqtt
 
-class MqttSubject(Subject):
-    def __init__(self, topic, name=''):
+class EchoSubject(Subject):
+    def __init__(self, name=''):
+        # Run the super class constructor
         super().__init__()
-        self.topic = topic
-        self.client = mqtt.Client(name)
+        # Make topic property
+        self.topic = 'echo'
+        # Make an MQTT client
+        self.client = mqtt.Client('EchoClient')
+        # Pass subscribe as a callback to on_connect
         self.client.on_connect = lambda client, userdat, flags, rc: client.subscribe(self.topic, qos=1)
+        # Add the subject on_next as the callback of mqtt on_message and pass to it the payload
         self.client.message_callback_add(topic, lambda client, userdata, msg: self.on_next(msg.payload.decode("utf-8")))
+        # Establish connection
         self.client.connect(environ.get("MQTT_SERVICE","localhost"))
+        # Start the client
         self.client.loop_start()
 
-    # Ideally the subject is used eiether for sending or receiving.
-    # This send method is just for sample simplicity.
     def send(self, msg):
+        """
+        Publishes message to the MQTT topic
+        """
         print("sending msg: {}".format(msg))
         self.client.publish(self.topic, msg, qos=0, retain=False)
 
@@ -28,8 +36,9 @@ class MqttSubject(Subject):
         self.client.loop_stop()
         self.client.disconnect()
 
-# name the topic "echo" cause that it is what this sample doing
-s = MqttSubject(topic="echo")
+# Create echo client
+s = EchoSubject()
+# Subscribe print to the subject
 s.subscribe(on_next=lambda msg: print("received msg: {}".format(msg)))
 
 
